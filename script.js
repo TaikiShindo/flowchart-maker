@@ -409,5 +409,160 @@ function exportFlowchart(format = 'png') {
 
 window.addEventListener('resize', drawConnections);
 
+// Konami code logic
+const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+let konamiIndex = 0;
+
+window.addEventListener('keydown', (e) => {
+    // Hidden game trigger
+    if (e.key === konamiCode[konamiIndex] || e.key.toLowerCase() === konamiCode[konamiIndex]) {
+        konamiIndex++;
+        if (konamiIndex === konamiCode.length) {
+            startHiddenGame();
+            konamiIndex = 0;
+        }
+    } else {
+        konamiIndex = 0;
+    }
+});
+
+function startHiddenGame() {
+    if (document.getElementById('hidden-game-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'hidden-game-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+    overlay.style.zIndex = '9999';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.backdropFilter = 'blur(10px)';
+    
+    const title = document.createElement('h2');
+    title.innerText = '🐍 SECRET SNAKE GAME 🐍';
+    title.style.color = '#10b981';
+    title.style.marginBottom = '20px';
+    title.style.fontFamily = 'monospace';
+    title.style.fontSize = '2rem';
+    
+    const scoreEl = document.createElement('div');
+    scoreEl.innerText = 'Score: 0';
+    scoreEl.style.color = 'white';
+    scoreEl.style.marginBottom = '10px';
+    scoreEl.style.fontFamily = 'monospace';
+    scoreEl.style.fontSize = '1.5rem';
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    canvas.style.border = '4px solid #3b82f6';
+    canvas.style.borderRadius = '8px';
+    canvas.style.backgroundColor = '#000';
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.innerText = 'ゲームを終了する (ESC)';
+    closeBtn.style.marginTop = '20px';
+    closeBtn.className = 'tool-btn danger';
+    
+    overlay.appendChild(title);
+    overlay.appendChild(scoreEl);
+    overlay.appendChild(canvas);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
+    
+    const ctx = canvas.getContext('2d');
+    const gridSize = 20;
+    let snake = [{x: 200, y: 200}];
+    let food = {x: 100, y: 100};
+    let dx = gridSize;
+    let dy = 0;
+    let score = 0;
+    let gameLoop;
+    
+    function randomFood() {
+        food.x = Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize;
+        food.y = Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize;
+    }
+    
+    function reset() {
+        snake = [{x: 200, y: 200}];
+        dx = gridSize; dy = 0; score = 0;
+        scoreEl.innerText = 'Score: ' + score;
+        randomFood();
+    }
+    
+    function draw() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(food.x, food.y, gridSize, gridSize);
+        
+        ctx.fillStyle = '#10b981';
+        snake.forEach((segment) => {
+            ctx.fillRect(segment.x, segment.y, gridSize - 1, gridSize - 1);
+        });
+        
+        const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+        
+        if (head.x < 0) head.x = canvas.width - gridSize;
+        if (head.x >= canvas.width) head.x = 0;
+        if (head.y < 0) head.y = canvas.height - gridSize;
+        if (head.y >= canvas.height) head.y = 0;
+        
+        for (let i = 0; i < snake.length; i++) {
+            if (head.x === snake[i].x && head.y === snake[i].y) {
+                reset();
+                return;
+            }
+        }
+        
+        snake.unshift(head);
+        
+        if (head.x === food.x && head.y === food.y) {
+            score += 10;
+            scoreEl.innerText = 'Score: ' + score;
+            randomFood();
+        } else {
+            snake.pop();
+        }
+    }
+    
+    function handleKeyDown(e) {
+        if (e.key === 'Escape') {
+            closeGame();
+            return;
+        }
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+        }
+        if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -gridSize; }
+        if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = gridSize; }
+        if (e.key === 'ArrowLeft' && dx === 0) { dx = -gridSize; dy = 0; }
+        if (e.key === 'ArrowRight' && dx === 0) { dx = gridSize; dy = 0; }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    function closeGame() {
+        clearInterval(gameLoop);
+        window.removeEventListener('keydown', handleKeyDown);
+        if (overlay.parentNode) {
+            document.body.removeChild(overlay);
+        }
+    }
+    
+    closeBtn.onclick = closeGame;
+    
+    randomFood();
+    gameLoop = setInterval(draw, 100);
+}
+
 // Start
 init();
